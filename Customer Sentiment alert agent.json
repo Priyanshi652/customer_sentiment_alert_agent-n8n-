@@ -1,0 +1,260 @@
+{
+  "name": "Customer Sentiment alert agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -736,
+        -16
+      ],
+      "id": "5b0e96f7-c64a-48c4-a245-5309dc94ab3d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b3f01d0e-d8c8-4ed1-b1eb-22aa3c1db0ee",
+              "leftValue": "={{ $json.message.content }}",
+              "rightValue": "negative",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        -16
+      ],
+      "id": "c7efbf76-d52b-48d8-a63f-b6f44e325ee9",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "url": "https://api.twitterapi.io/twitter/tweet/advanced_search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{\"problem OR complaint OR bad OR bad service OR angry OR slow Or not working OR issue OR refund OR poor experience OR bad product OR worst OR disappointed OR refund OR frustrated\"}}"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "new1_112d4bd9e574426ebff77e9b1acbde14"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -544,
+        -16
+      ],
+      "id": "aab97be8-ba3d-4494-a360-20bebff1faa4",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ql8lArk0dOFHThC4",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{`Write a professional, polite, and helpful response to the following negative feedback: \"${$json.text}\"`}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        128,
+        -16
+      ],
+      "id": "5bd5567f-0cdb-4b97-8c27-2c6761642529",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "bEYgM7JZUqy00NZK",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{`Analyze the following text and respond with only one of these labels:negative.\nText:$json.tweets[0].text`}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -368,
+        -16
+      ],
+      "id": "65327a46-1a4a-4173-92d8-1853913f870c",
+      "name": "analyzing negative response",
+      "credentials": {
+        "openAiApi": {
+          "id": "bEYgM7JZUqy00NZK",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "priyanshi.kh931@gmail.com,2300080181aids@gmail.com",
+        "subject": "Suggested Feedback ",
+        "message": "=🚨 Negative Feedback Detected<br><br>\nUser: {{ $('HTTP Request').item.json.tweets[0].author.userName }}<br><br>Comment:{{ $('HTTP Request').item.json.tweets[0].text }}<br><br>Link: https://twitter.com/{{ $('HTTP Request').item.json.tweets[0].author.userName }}/status/{{ $('HTTP Request').item.json.tweets[0].author.id }}<br><br>Suggested Response:\n{{ $json.message.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        -16
+      ],
+      "id": "ac054a62-f1b2-4e67-8362-ee3ae03a79f8",
+      "name": "Send a message",
+      "webhookId": "98a8929a-e795-4be0-b8b8-b2a6d283b20f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ac8xi79fKJQLdHRv",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "analyzing negative response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analyzing negative response": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "0adc891d-e6db-4091-b8d3-3a6724e14ca2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "150b25919a084c1d527022ef7df466b1ee8c8240b659364c0c8e838e41f3b136"
+  },
+  "id": "2DvbCXTSGbYhiUaD",
+  "tags": []
+}
